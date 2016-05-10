@@ -1,0 +1,153 @@
+\documentclass{article}\usepackage[]{graphicx}\usepackage[]{color}
+%% maxwidth is the original width if it is less than linewidth
+%% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\makeatletter
+\def\maxwidth{ %
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+
+\definecolor{fgcolor}{rgb}{0.345, 0.345, 0.345}
+\newcommand{\hlnum}[1]{\textcolor[rgb]{0.686,0.059,0.569}{#1}}%
+\newcommand{\hlstr}[1]{\textcolor[rgb]{0.192,0.494,0.8}{#1}}%
+\newcommand{\hlcom}[1]{\textcolor[rgb]{0.678,0.584,0.686}{\textit{#1}}}%
+\newcommand{\hlopt}[1]{\textcolor[rgb]{0,0,0}{#1}}%
+\newcommand{\hlstd}[1]{\textcolor[rgb]{0.345,0.345,0.345}{#1}}%
+\newcommand{\hlkwa}[1]{\textcolor[rgb]{0.161,0.373,0.58}{\textbf{#1}}}%
+\newcommand{\hlkwb}[1]{\textcolor[rgb]{0.69,0.353,0.396}{#1}}%
+\newcommand{\hlkwc}[1]{\textcolor[rgb]{0.333,0.667,0.333}{#1}}%
+\newcommand{\hlkwd}[1]{\textcolor[rgb]{0.737,0.353,0.396}{\textbf{#1}}}%
+
+\usepackage{framed}
+\makeatletter
+\newenvironment{kframe}{%
+ \def\at@end@of@kframe{}%
+ \ifinner\ifhmode%
+  \def\at@end@of@kframe{\end{minipage}}%
+  \begin{minipage}{\columnwidth}%
+ \fi\fi%
+ \def\FrameCommand##1{\hskip\@totalleftmargin \hskip-\fboxsep
+ \colorbox{shadecolor}{##1}\hskip-\fboxsep
+     % There is no \\@totalrightmargin, so:
+     \hskip-\linewidth \hskip-\@totalleftmargin \hskip\columnwidth}%
+ \MakeFramed {\advance\hsize-\width
+   \@totalleftmargin\z@ \linewidth\hsize
+   \@setminipage}}%
+ {\par\unskip\endMakeFramed%
+ \at@end@of@kframe}
+\makeatother
+
+\definecolor{shadecolor}{rgb}{.97, .97, .97}
+\definecolor{messagecolor}{rgb}{0, 0, 0}
+\definecolor{warningcolor}{rgb}{1, 0, 1}
+\definecolor{errorcolor}{rgb}{1, 0, 0}
+\newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
+
+\usepackage{alltt}
+\setcounter{page}{14}
+\usepackage{geometry}
+ \geometry{
+ a4paper,
+ total={170mm,257mm},
+ left=25mm,
+ right=25mm,
+ top=25mm,
+ bottom=25mm
+ }
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\begin{document}
+
+\appendix
+\section*{Appendix: R-Code compiled by knitr }
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{# This script carries out single country adf unit root tests as well as panel data unit }
+\hlcom{# root tests for real effective exchange rate data retrieved from the IMF database.}
+\hlcom{# authored by Bernhard Dalheimer, bernhard.dalheimer@hotmail.com}
+
+\hlcom{# Check for required packages and install if not available in library}
+\hlstd{packagesCran} \hlkwb{=} \hlkwd{c}\hlstd{(}\hlstr{"data.table"}\hlstd{,} \hlstr{"plm"}\hlstd{,} \hlstr{"xtable"}\hlstd{,} \hlstr{"scales"}\hlstd{,} \hlstr{"CADFtest"}\hlstd{,} \hlstr{"ggplot2"}\hlstd{)}
+
+\hlkwa{if} \hlstd{(}\hlkwd{length}\hlstd{(}\hlkwd{setdiff}\hlstd{(packagesCran,} \hlkwd{rownames}\hlstd{(}\hlkwd{installed.packages}\hlstd{())))} \hlopt{>} \hlnum{0}\hlstd{) \{}
+  \hlkwd{install.packages}\hlstd{(}\hlkwd{setdiff}\hlstd{(packagesCran,} \hlkwd{rownames}\hlstd{(}\hlkwd{installed.packages}\hlstd{())))}
+\hlstd{\}}
+\hlkwd{lapply}\hlstd{(packagesCran, require,} \hlkwc{character.only} \hlstd{= T)}
+
+\hlcom{# load IMF data on REER and prepare: please check comma and seperator settings}
+\hlstd{reerIMF} \hlkwb{=} \hlkwd{as.data.table}\hlstd{(}\hlkwd{read.csv}\hlstd{(}\hlstr{"~/reerIMF.csv"}\hlstd{))}
+\hlkwd{setnames}\hlstd{(reerIMF,} \hlstr{"X"}\hlstd{,} \hlstr{"Time"}\hlstd{)}
+\hlkwd{colnames}\hlstd{(reerIMF)} \hlkwb{=} \hlkwd{gsub}\hlstd{(}\hlstr{".."}\hlstd{,} \hlstr{" "}\hlstd{,} \hlkwd{colnames}\hlstd{(reerIMF),} \hlkwc{fixed} \hlstd{= T)}
+\hlkwd{colnames}\hlstd{(reerIMF)} \hlkwb{=} \hlkwd{gsub}\hlstd{(}\hlstr{"."}\hlstd{,} \hlstr{" "}\hlstd{,} \hlkwd{colnames}\hlstd{(reerIMF),} \hlkwc{fixed} \hlstd{= T)}
+
+\hlcom{## PLOT}
+\hlcom{#set proper time format}
+\hlstd{reerIMF[, Time} \hlkwb{:=} \hlkwd{seq}\hlstd{(}\hlkwd{as.Date}\hlstd{(}\hlstr{"1980/1/1"}\hlstd{),} \hlkwd{as.Date}\hlstd{(}\hlstr{"2013/12/24"}\hlstd{),} \hlstr{"months"}\hlstd{)]}
+
+\hlcom{# convert to long data formar for usage in ggplot}
+\hlstd{reerIMFLong} \hlkwb{=} \hlkwd{melt}\hlstd{(reerIMF,} \hlkwc{id.vars} \hlstd{=} \hlstr{'Time'}\hlstd{,}
+                   \hlkwc{variable.name} \hlstd{=} \hlstr{"Country"}\hlstd{,} \hlkwc{value.name} \hlstd{=} \hlstr{"reer"}\hlstd{)}
+
+\hlcom{#plot the time series}
+\hlkwd{ggplot}\hlstd{(reerIMFLong,} \hlkwd{aes}\hlstd{(}\hlkwc{x} \hlstd{= Time,} \hlkwc{y} \hlstd{= reer))} \hlopt{+}
+  \hlkwd{geom_line}\hlstd{()} \hlopt{+}
+  \hlkwd{ylab}\hlstd{(}\hlstr{"Real Effective Exchange Rate"}\hlstd{)} \hlopt{+} \hlkwd{xlab}\hlstd{(}\hlstr{"Time"}\hlstd{)}\hlopt{+}
+  \hlkwd{facet_wrap}\hlstd{(}\hlopt{~} \hlstd{Country,} \hlkwc{scales} \hlstd{=} \hlstr{'free_y'}\hlstd{,} \hlkwc{ncol} \hlstd{=} \hlnum{4}\hlstd{)}
+
+
+\hlcom{## SINGLE COUNTRY UNIT ROOT TESTs}
+\hlcom{# perform ADF tests}
+\hlstd{adfTest} \hlkwb{=} \hlkwd{sapply}\hlstd{(reerIMF[,} \hlopt{-}\hlstr{"Time"}\hlstd{,} \hlkwc{with} \hlstd{=} \hlnum{FALSE}\hlstd{],}
+                 \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{) \{}\hlkwd{CADFtest}\hlstd{(x,}
+                                       \hlkwc{max.lag.y} \hlstd{=} \hlnum{7}\hlstd{,}
+                                       \hlkwc{criterion} \hlstd{=} \hlstr{"AIC"}\hlstd{,}
+                                       \hlkwc{type} \hlstd{=} \hlstr{"drift"}\hlstd{)\})}
+\hlcom{# perform kpss test}
+\hlstd{kpssTest} \hlkwb{=} \hlkwd{sapply}\hlstd{(reerIMF[,} \hlopt{-}\hlstr{"Time"}\hlstd{,} \hlkwc{with} \hlstd{=} \hlnum{FALSE}\hlstd{],}
+                  \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{) \{}\hlkwd{kpss.test}\hlstd{(x,} \hlkwc{lshort} \hlstd{= F)\})}
+
+\hlcom{# extract inference parameters}
+\hlstd{unitRootTestTable} \hlkwb{=} \hlkwd{data.table}\hlstd{(}\hlkwc{Country} \hlstd{=} \hlkwd{names}\hlstd{(reerIMF[,} \hlopt{-}\hlstr{"Time"}\hlstd{,} \hlkwc{with} \hlstd{=} \hlnum{FALSE}\hlstd{]),}
+                               \hlkwc{ADFlag} \hlstd{= adfTest[}\hlstr{"max.lag.y"}\hlstd{,],}
+                               \hlkwc{ADF} \hlstd{= adfTest[}\hlstr{"statistic"}\hlstd{,],}
+                               \hlkwc{ADFpvalue} \hlstd{= adfTest[}\hlstr{"p.value"}\hlstd{,],}
+                               \hlkwc{kpss} \hlstd{= kpssTest[}\hlstr{"statistic"}\hlstd{,],}
+                               \hlkwc{kpssPvalue} \hlstd{= kpssTest[}\hlstr{"p.value"}\hlstd{,]}
+\hlstd{)}
+
+\hlcom{# set keys accordingly}
+\hlkwd{setkey}\hlstd{(unitRootTestTable, Country)}
+
+\hlcom{# compile table to export to Latex}
+\hlkwd{print}\hlstd{(}\hlkwd{xtable}\hlstd{(unitRootTestTable,}
+             \hlkwc{digits} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{0}\hlstd{,} \hlnum{0}\hlstd{,} \hlnum{4}\hlstd{,} \hlnum{4}\hlstd{,} \hlnum{4}\hlstd{,} \hlnum{2}\hlstd{)),}
+      \hlkwc{include.rownames} \hlstd{=} \hlnum{FALSE}\hlstd{)}
+
+\hlcom{## PANEL UNIT ROOT TESTS}
+
+\hlstd{panelUnitRootIPS} \hlkwb{=} \hlkwd{purtest}\hlstd{(}\hlkwd{as.data.frame}\hlstd{(reerIMF[,} \hlopt{-}\hlstr{"Time"}\hlstd{,} \hlkwc{with} \hlstd{=} \hlnum{FALSE}\hlstd{]),}
+                           \hlkwc{pmax} \hlstd{=} \hlnum{20}\hlstd{,} \hlkwc{exo} \hlstd{=} \hlstr{"intercept"}\hlstd{,} \hlkwc{test} \hlstd{=} \hlstr{"ips"}\hlstd{)}
+\hlstd{panelUnitRootMW} \hlkwb{=} \hlkwd{purtest}\hlstd{(}\hlkwd{as.data.frame}\hlstd{(reerIMF[,} \hlopt{-}\hlstr{"Time"}\hlstd{,} \hlkwc{with} \hlstd{=} \hlnum{FALSE}\hlstd{]),}
+                          \hlkwc{pmax} \hlstd{=} \hlnum{20}\hlstd{,} \hlkwc{exo} \hlstd{=} \hlstr{"intercept"}\hlstd{,} \hlkwc{test} \hlstd{=} \hlstr{"madwu"}\hlstd{)}
+
+\hlcom{#set up exportable data.table}
+\hlstd{panelUnitRootTests} \hlkwb{=} \hlkwd{data.table}\hlstd{(} \hlkwc{test} \hlstd{=} \hlkwd{c}\hlstd{(}\hlstr{"IPS"}\hlstd{,} \hlstr{"MW"}\hlstd{),}
+                                 \hlkwc{Statistic} \hlstd{=} \hlkwd{as.data.table}\hlstd{(}
+                                   \hlkwd{unlist}\hlstd{(}\hlkwd{c}\hlstd{(panelUnitRootIPS}\hlopt{$}\hlstd{statistic[}\hlnum{1}\hlstd{],}
+                                            \hlstd{panelUnitRootMW}\hlopt{$}\hlstd{statistic[}\hlnum{1}\hlstd{]))),}
+                                 \hlkwc{pvalue} \hlstd{=} \hlkwd{as.data.table}\hlstd{(}
+                                   \hlkwd{unlist}\hlstd{(}\hlkwd{c}\hlstd{(panelUnitRootIPS}\hlopt{$}\hlstd{statistic[}\hlnum{6}\hlstd{],}
+                                            \hlstd{panelUnitRootMW}\hlopt{$}\hlstd{statistic[}\hlnum{6}\hlstd{])))}
+                                 \hlstd{)}
+\hlcom{# Export to Latex}
+\hlkwd{print}\hlstd{(}\hlkwd{xtable}\hlstd{(panelUnitRootTests,}
+             \hlkwc{digits} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,}\hlnum{0}\hlstd{,}\hlnum{4}\hlstd{,}\hlnum{4}\hlstd{),}
+             \hlkwc{include.rownames} \hlstd{=} \hlnum{FALSE}\hlstd{))}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+  \end{document}

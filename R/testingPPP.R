@@ -1,0 +1,79 @@
+# This script carries out single country adf unit root tests as well as panel data unit root 
+# tests for real effective exchange rate data retrieved from the IMF database.
+# authored by Bernhard Dalheimer, bernhard.dalheimer@hotmail.com
+
+# Check for required packages and install if not available in library
+packagesCran = c("data.table", "plm", "xtable", "scales", "CADFtest", "ggplot2")
+
+if (length(setdiff(packagesCran, rownames(installed.packages()))) > 0) {
+  install.packages(setdiff(packagesCran, rownames(installed.packages())))  
+}
+lapply(packagesCran, require, character.only = T)
+
+# Set working directory to location where data is saved as csv
+setwd("~/Data")
+
+# load IMF data on REER and prepare
+reerIMF = as.data.table(read.csv("reerIMF.csv"))
+setnames(reerIMF, "X", "Time")
+colnames(reerIMF) = gsub("..", " ", colnames(reerIMF), fixed = T)
+colnames(reerIMF) = gsub(".", " ", colnames(reerIMF), fixed = T)
+
+## PLOT
+#set proper time format
+reerIMF[, Time := seq(as.Date("1980/1/1"), as.Date("2013/12/24"), "months")]
+
+# convert to long data formar for usage in ggplot
+reerIMFLong = melt(reerIMF, id.vars = 'Time', variable.name = "Country", value.name = "reer")
+
+#plot the time series
+ggplot(reerIMFLong, aes(x = Time, y = reer)) + 
+  geom_line() + 
+  ylab("Real Effective Exchange Rate") + xlab("Time")+
+  facet_wrap(~ Country, scales = 'free_y', ncol = 4)
+
+
+## SINGLE COUNTRY UNIT ROOT TESTs
+# perform ADF tests
+adfTest = sapply(reerIMF[, -"Time", with = FALSE], 
+                 function(x) {CADFtest(x, 
+                                       max.lag.y = 7, 
+                                       criterion = "AIC", 
+                                       type = "drift")})
+# perform kpss test
+kpssTest = sapply(reerIMF[, -"Time", with = FALSE], function(x) {kpss.test(x, lshort = F)})
+
+# extract inference parameters
+unitRootTestTable = data.table(Country = names(reerIMF[, -"Time", with = FALSE]),
+                               ADFlag = adfTest["max.lag.y",],
+                               ADF = adfTest["statistic",],
+                               ADFpvalue = adfTest["p.value",],
+                               kpss = kpssTest["statistic",],
+                               kpssPvalue = kpssTest["p.value",]
+)
+
+# set keys accordingly
+setkey(unitRootTestTable, Country)
+
+# compile table to export to Latex
+print(xtable(unitRootTestTable, 
+             digits = c(0, 0, 0, 4, 4, 4, 2)), 
+      include.rownames = FALSE)
+
+## PANEL UNIT ROOT TESTS
+
+panelUnitRootIPS = purtest(as.data.frame(reerIMF[, -"Time", with = FALSE]), pmax = 20, exo = "intercept", test = "ips")
+panelUnitRootMW = purtest(as.data.frame(reerIMF[, -"Time", with = FALSE]), pmax = 20, exo = "intercept", test = "madwu")
+
+#set up exportable data.table
+panelUnitRootTests = data.table( test = c("IPS", "MW"),
+                                 Statistic = as.data.table(unlist(c(panelUnitRootIPS$statistic[1], 
+                                                                    panelUnitRootMW$statistic[1]))),
+                                 pvalue = as.data.table(unlist(c(panelUnitRootIPS$statistic[6], 
+                                                                 panelUnitRootMW$statistic[6])))
+                                 )
+# Export to Latex
+print(xtable(panelUnitRootTests, 
+             digits = c(0,0,4,4), 
+             include.rownames = FALSE))
+
